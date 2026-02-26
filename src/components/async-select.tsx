@@ -42,12 +42,16 @@ export interface APISelectProps<T> {
   preload?: boolean;
   /** Function to filter options */
   filterFn?: (option: T, query: string) => boolean;
-  /** Function to render each option */
-  renderOption: (option: T) => React.ReactNode;
+  /** Function to render the item content (used in trigger and as fallback for dropdown) */
+  renderItem: (option: T) => React.ReactNode;
   /** Function to get the value from an option */
   getOptionValue: (option: T) => string;
-  /** Function to get the display value for the selected option */
-  getDisplayValue: (option: T) => React.ReactNode;
+  /** Function to render each option in the dropdown list (falls back to renderItem) */
+  renderListItem?: (option: T) => React.ReactNode;
+  /** Class name for the item wrapper in the trigger */
+  itemClassName?: string;
+  /** Class name for the item wrapper in the dropdown list */
+  listItemClassName?: string;
   /** Custom not found message */
   notFound?: React.ReactNode;
   /** Custom loading skeleton */
@@ -82,9 +86,11 @@ export function APISelect<T>({
   resultsKey,
   preload,
   filterFn,
-  renderOption,
+  renderItem,
   getOptionValue,
-  getDisplayValue,
+  renderListItem,
+  itemClassName = "flex items-center gap-2",
+  listItemClassName = "flex items-center gap-2 text-left",
   notFound,
   loadingSkeleton,
   label,
@@ -226,7 +232,7 @@ export function APISelect<T>({
           disabled={disabled}
         >
           {selectedOption ? (
-            getDisplayValue(selectedOption)
+            <div className={itemClassName}>{renderItem(selectedOption)}</div>
           ) : (
             placeholder
           )}
@@ -290,7 +296,7 @@ export function APISelect<T>({
                   value={getOptionValue(option)}
                   onSelect={handleSelect}
                 >
-                  {renderOption(option)}
+                  <div className={listItemClassName}>{(renderListItem ?? renderItem)(option)}</div>
                   <Check
                     className={cn(
                       "ml-auto h-3 w-3",

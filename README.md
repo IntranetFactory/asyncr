@@ -21,9 +21,8 @@ function MyComponent() {
   return (
     <AsyncSelect<DataType>
       fetcher={fetchData}
-      renderOption={(item) => <div>{item.name}</div>}
+      renderItem={(item) => <div>{item.name}</div>}
       getOptionValue={(item) => item.id}
-      getDisplayValue={(item) => item.name}
       label="Select"
       value={value}
       onChange={setValue}
@@ -39,9 +38,8 @@ function MyComponent() {
 | Prop | Type | Description |
 |------|------|-------------|
 | `fetcher` | `(query?: string) => Promise<T[]>` | Async function to fetch options |
-| `renderOption` | `(option: T) => React.ReactNode` | Function to render each option in the dropdown |
+| `renderItem` | `(option: T) => React.ReactNode` | Function to render item content (used in trigger and as fallback for dropdown) |
 | `getOptionValue` | `(option: T) => string` | Function to get unique value from option |
-| `getDisplayValue` | `(option: T) => React.ReactNode` | Function to render selected value |
 | `value` | `string` | Currently selected value |
 | `onChange` | `(value: string) => void` | Callback when selection changes |
 | `label` | `string` | Label for the select field |
@@ -50,6 +48,9 @@ function MyComponent() {
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
+| `renderListItem` | `(option: T) => React.ReactNode` | - | Function to render each option in the dropdown list (falls back to `renderItem`) |
+| `itemClassName` | `string` | `"flex items-center gap-2"` | Class name for the item wrapper in the trigger |
+| `listItemClassName` | `string` | `"flex items-center gap-2 text-left"` | Class name for the item wrapper in the dropdown list |
 | `preload` | `boolean` | `false` | Enable preloading all options |
 | `filterFn` | `(option: T, query: string) => boolean` | - | Custom filter function for preload mode |
 | `notFound` | `React.ReactNode` | - | Custom not found message/component |
@@ -69,8 +70,8 @@ function MyComponent() {
 ```tsx
 <AsyncSelect<User>
   fetcher={searchUsers}
-  renderOption={(user) => (
-    <div className="flex items-center gap-2">
+  renderItem={(user) => (
+    <>
       <Image
         src={user.avatar}
         alt={user.name}
@@ -82,24 +83,9 @@ function MyComponent() {
         <div className="font-medium">{user.name}</div>
         <div className="text-xs text-muted-foreground">{user.role}</div>
       </div>
-    </div>
+    </>
   )}
   getOptionValue={(user) => user.id}
-  getDisplayValue={(user) => (
-    <div className="flex items-center gap-2">
-      <Image
-        src={user.avatar}
-        alt={user.name}
-        width={24}
-        height={24}
-        className="rounded-full"
-      />
-      <div className="flex flex-col">
-        <div className="font-medium">{user.name}</div>
-        <div className="text-xs text-muted-foreground">{user.role}</div>
-      </div>
-    </div>
-  )}
   notFound={<div className="py-6 text-center text-sm">No users found</div>}
   label="User"
   placeholder="Search users..."
@@ -116,8 +102,8 @@ function MyComponent() {
   fetcher={searchAllUsers}
   preload
   filterFn={(user, query) => user.name.toLowerCase().includes(query.toLowerCase())}
-  renderOption={(user) => (
-    <div className="flex items-center gap-2">
+  renderItem={(user) => (
+    <>
       <Image
         src={user.avatar}
         alt={user.name}
@@ -129,10 +115,9 @@ function MyComponent() {
         <div className="font-medium">{user.name}</div>
         <div className="text-xs text-muted-foreground">{user.role}</div>
       </div>
-    </div>
+    </>
   )}
   getOptionValue={(user) => user.id}
-  getDisplayValue={(user) => user.name}
   label="User"
   value={selectedUser}
   onChange={setSelectedUser}
@@ -146,9 +131,11 @@ interface AsyncSelectProps<T> {
   fetcher: (query?: string) => Promise<T[]>;
   preload?: boolean;
   filterFn?: (option: T, query: string) => boolean;
-  renderOption: (option: T) => React.ReactNode;
+  renderItem: (option: T) => React.ReactNode;
   getOptionValue: (option: T) => string;
-  getDisplayValue: (option: T) => React.ReactNode;
+  renderListItem?: (option: T) => React.ReactNode;
+  itemClassName?: string;
+  listItemClassName?: string;
   notFound?: React.ReactNode;
   loadingSkeleton?: React.ReactNode;
   value: string;
