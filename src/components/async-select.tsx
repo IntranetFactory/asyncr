@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useQuery } from "@tanstack/react-query";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -26,11 +27,17 @@ export interface Option {
   icon?: React.ReactNode;
 }
 
-export interface AsyncSelectProps<T> {
-  /** Async function to fetch options */
-  fetcher: (query?: string) => Promise<T[]>;
-  /** Async function to resolve initial value to option */
-  fetchInitialOption?: (value: string) => Promise<T | null>;
+export interface APISelectProps<T> {
+  /** URL template for searching. Use ${query} as placeholder for search term */
+  searchUrl?: string;
+  /** URL template for fetching a single record by ID. Use ${id} as placeholder */
+  idUrl?: string;
+  /** Async function to fetch options (takes priority over searchUrl when set) */
+  fetcher?: (query?: string) => Promise<T[]>;
+  /** Async function to resolve initial value to option (takes priority over idUrl when set) */
+  recordFetcher?: (value: string) => Promise<T | null>;
+  /** Function to extract the results array from the search API response */
+  resultsKey?: (data: unknown) => T[];
   /** Preload all data ahead of time */
   preload?: boolean;
   /** Function to filter options */
@@ -67,9 +74,12 @@ export interface AsyncSelectProps<T> {
   clearable?: boolean;
 }
 
-export function AsyncSelect<T>({
+export function APISelect<T>({
+  searchUrl,
+  idUrl,
   fetcher,
-  fetchInitialOption,
+  recordFetcher,
+  resultsKey,
   preload,
   filterFn,
   renderOption,
@@ -87,80 +97,118 @@ export function AsyncSelect<T>({
   triggerClassName,
   noResultsMessage,
   clearable = true,
-}: AsyncSelectProps<T>) {
+}: APISelectProps<T>) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
-  const [options, setOptions] = useState<T[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedValue, setSelectedValue] = useState(value);
   const [selectedOption, setSelectedOption] = useState<T | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, preload ? 0 : 300);
-  const [originalOptions, setOriginalOptions] = useState<T[]>([]);
+
+  // Determine which fetchers to use (custom fetchers take priority over URLs)
+  const effectiveFetcher = useCallback(
+    async (query?: string): Promise<T[]> => {
+      if (fetcher) return fetcher(query);
+      if (searchUrl) {
+        let url: string;
+        if (query) {
+          url = searchUrl.replace("${query}", encodeURIComponent(query));
+        } else {
+          // Remove query params that contain template placeholders, then fix leftover &/? issues
+          url = searchUrl
+            .replace(/([?&])[^?&]*\$\{[^}]*\}[^&]*/g, "$1")
+            .replace(/[?&]$/, "")
+            .replace(/\?&/, "?");
+        }
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Search failed: ${res.statusText}`);
+        const data = await res.json();
+        return resultsKey ? resultsKey(data) : data;
+      }
+      return [];
+    },
+    [fetcher, searchUrl, resultsKey]
+  );
+
+  const effectiveRecordFetcher = useCallback(
+    async (id: string): Promise<T | null> => {
+      if (recordFetcher) return recordFetcher(id);
+      if (idUrl) {
+        const url = idUrl.replace("${id}", encodeURIComponent(id));
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        return res.json();
+      }
+      return null;
+    },
+    [recordFetcher, idUrl]
+  );
+
+  // TanStack Query for search results
+  const {
+    data: options = [],
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
+    queryKey: [searchUrl, debouncedSearchTerm, open],
+    queryFn: async () => {
+      if (preload && mounted && debouncedSearchTerm) {
+        const all = await effectiveFetcher();
+        return filterFn
+          ? all.filter((option) => filterFn(option, debouncedSearchTerm))
+          : all;
+      }
+      return effectiveFetcher(debouncedSearchTerm || undefined);
+    },
+    enabled: open || (preload === true),
+    staleTime: 30_000,
+  });
+
+  // TanStack Query for initial option resolution
+  const { data: initialOption } = useQuery({
+    queryKey: [idUrl, value],
+    queryFn: () => effectiveRecordFetcher(value),
+    enabled: !!value && !selectedOption,
+    staleTime: Infinity,
+  });
+
+  const error = queryError ? (queryError instanceof Error ? queryError.message : "Failed to fetch options") : null;
 
   useEffect(() => {
     setMounted(true);
     setSelectedValue(value);
   }, [value]);
 
-  // Initialize selectedOption when options are loaded and value exists
+  // Set selected option from initial fetch
+  useEffect(() => {
+    if (initialOption && !selectedOption) {
+      setSelectedOption(initialOption);
+    }
+  }, [initialOption, selectedOption]);
+
+  // Update selectedOption when options are loaded and value exists
   useEffect(() => {
     if (value && options.length > 0) {
-      const option = options.find(opt => getOptionValue(opt) === value);
+      const option = options.find((opt) => getOptionValue(opt) === value);
       if (option) {
         setSelectedOption(option);
       }
     }
   }, [value, options, getOptionValue]);
 
-  // Resolve the display value for the initially selected option
-  useEffect(() => {
-    if (!mounted && value && fetchInitialOption) {
-      fetchInitialOption(value).then((option) => {
-        if (option) setSelectedOption(option);
-      });
-    }
-  }, [mounted, value, fetchInitialOption]);
-
-  // Fetch options when dropdown opens or search term changes
-  useEffect(() => {
-    if (!open && options.length === 0 && !preload) return;
-    if (!open && !preload) return;
-
-    const fetchOptions = async () => {
-      if (preload && mounted) {
-        if (debouncedSearchTerm) {
-          setOptions(originalOptions.filter((option) => filterFn ? filterFn(option, debouncedSearchTerm) : true));
-        } else {
-          setOptions(originalOptions);
-        }
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await fetcher(debouncedSearchTerm || undefined);
-        setOriginalOptions(data);
-        setOptions(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch options');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOptions();
-  }, [open, debouncedSearchTerm, preload, filterFn]);
-
-  const handleSelect = useCallback((currentValue: string) => {
-    const newValue = clearable && currentValue === selectedValue ? "" : currentValue;
-    setSelectedValue(newValue);
-    setSelectedOption(options.find((option) => getOptionValue(option) === newValue) || null);
-    onChange(newValue);
-    setOpen(false);
-  }, [selectedValue, onChange, clearable, options, getOptionValue]);
+  const handleSelect = useCallback(
+    (currentValue: string) => {
+      const newValue =
+        clearable && currentValue === selectedValue ? "" : currentValue;
+      setSelectedValue(newValue);
+      setSelectedOption(
+        options.find((option) => getOptionValue(option) === newValue) || null
+      );
+      onChange(newValue);
+      setOpen(false);
+    },
+    [selectedValue, onChange, clearable, options, getOptionValue]
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

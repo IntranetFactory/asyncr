@@ -1,66 +1,64 @@
 "use client";
 
-import { AsyncSelect } from "@/components/async-select";
+import { APISelect } from "@/components/async-select";
 import { useState } from "react";
 
-async function searchProducts(query?: string): Promise<Record<string, unknown>[]> {
-  const url = query
-    ? `https://dummyjson.com/products/search?q=${encodeURIComponent(query)}&limit=10`
-    : `https://dummyjson.com/products?limit=10`;
-  const res = await fetch(url);
-  const data = await res.json();
-  return data.products;
-}
-
-async function getProductById(id: string): Promise<Record<string, unknown> | null> {
-  const res = await fetch(`https://dummyjson.com/products/${id}`);
-  if (!res.ok) return null;
-  return res.json();
-}
-
 export default function DemoPage() {
-  const [selectedProduct, setSelectedProduct] = useState<string>("26");
+  const [selectedProduct1, setSelectedProduct1] = useState<string>("26");
+  const [selectedProduct2, setSelectedProduct2] = useState<string>("26");
 
-  console.log(selectedProduct);
+  console.log(selectedProduct1, selectedProduct2);
+
+  const selectProps = {
+    searchUrl: "https://dummyjson.com/products/search?q=${query}&limit=10",
+    idUrl: "https://dummyjson.com/products/${id}",
+    resultsKey: (data: unknown) => (data as { products: Record<string, unknown>[] }).products,
+    renderOption: (product: Record<string, unknown>) => (
+      <div className="flex items-center gap-2">
+        <img
+          src={product.thumbnail as string}
+          alt={product.title as string}
+          className="w-8 h-8 rounded object-cover"
+        />
+        <div className="flex flex-col">
+          <div className="font-medium">{product.title as string}</div>
+          <div className="text-xs text-muted-foreground">${String(product.price)}</div>
+        </div>
+      </div>
+    ),
+    getOptionValue: (product: Record<string, unknown>) => String(product.id),
+    getDisplayValue: (product: Record<string, unknown>) => (
+      <div className="flex items-center gap-2 text-left">
+        <img
+          src={product.thumbnail as string}
+          alt={product.title as string}
+          className="w-8 h-8 rounded object-cover"
+        />
+        <div className="flex flex-col leading-tight">
+          <div className="font-medium">{product.title as string}</div>
+          <div className="text-xxs text-muted-foreground">${String(product.price)}</div>
+        </div>
+      </div>
+    ),
+    notFound: <div className="py-6 text-center text-sm">No products found</div>,
+    label: "Product",
+    placeholder: "Search products...",
+    width: "350px",
+  } as const;
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <AsyncSelect<Record<string, unknown>>
-        fetcher={searchProducts}
-        fetchInitialOption={getProductById}
-        renderOption={(product) => (
-          <div className="flex items-center gap-2">
-            <img
-              src={product.thumbnail as string}
-              alt={product.title as string}
-              className="w-8 h-8 rounded object-cover"
-            />
-            <div className="flex flex-col">
-              <div className="font-medium">{product.title as string}</div>
-              <div className="text-xs text-muted-foreground">${String(product.price)}</div>
-            </div>
-          </div>
-        )}
-        getOptionValue={(product) => String(product.id)}
-        getDisplayValue={(product) => (
-          <div className="flex items-center gap-2 text-left">
-            <img
-              src={product.thumbnail as string}
-              alt={product.title as string}
-              className="w-8 h-8 rounded object-cover"
-            />
-            <div className="flex flex-col leading-tight">
-              <div className="font-medium">{product.title as string}</div>
-              <div className="text-xxs text-muted-foreground">${String(product.price)}</div>
-            </div>
-          </div>
-        )}
-        notFound={<div className="py-6 text-center text-sm">No products found</div>}
-        label="Product"
-        placeholder="Search products..."
-        value={selectedProduct}
-        onChange={setSelectedProduct}
-        width="350px"
+    <main className="flex min-h-screen justify-center gap-4 pt-12">
+      <APISelect<Record<string, unknown>>
+        {...selectProps}
+        label="Product 1"
+        value={selectedProduct1}
+        onChange={setSelectedProduct1}
+      />
+      <APISelect<Record<string, unknown>>
+        {...selectProps}
+        label="Product 2"
+        value={selectedProduct2}
+        onChange={setSelectedProduct2}
       />
     </main>
   );

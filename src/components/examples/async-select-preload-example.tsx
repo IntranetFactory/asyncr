@@ -1,14 +1,14 @@
 "use client";
 
 import { User, searchAllUsers } from "@/app/actions";
-import { AsyncSelect } from "@/components/async-select";
+import { APISelect } from "@/components/async-select";
 import { useState } from "react";
 
 export default function AsyncSelectExample() {
   const [selectedUser, setSelectedUser] = useState<string>("");
 
   return (
-    <AsyncSelect<User>
+    <APISelect<User>
       fetcher={searchAllUsers}
       preload
       filterFn={(user, query) => user.name.toLowerCase().includes(query.toLowerCase())}

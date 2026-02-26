@@ -1,14 +1,14 @@
 "use client";
 
 import { User, searchUsers } from "@/app/actions";
-import { AsyncSelect } from "@/components/async-select";
+import { APISelect } from "@/components/async-select";
 import { useState } from "react";
 
 export default function AsyncSelectExample() {
   const [selectedUser, setSelectedUser] = useState<string>("");
 
   return (
-    <AsyncSelect<User>
+    <APISelect<User>
       fetcher={searchUsers}
       renderOption={(user) => (
         <div className="flex items-center gap-2">
