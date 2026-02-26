@@ -29,6 +29,8 @@ export interface Option {
 export interface AsyncSelectProps<T> {
   /** Async function to fetch options */
   fetcher: (query?: string) => Promise<T[]>;
+  /** Async function to resolve initial value to option */
+  fetchInitialOption?: (value: string) => Promise<T | null>;
   /** Preload all data ahead of time */
   preload?: boolean;
   /** Function to filter options */
@@ -67,6 +69,7 @@ export interface AsyncSelectProps<T> {
 
 export function AsyncSelect<T>({
   fetcher,
+  fetchInitialOption,
   preload,
   filterFn,
   renderOption,
@@ -111,34 +114,34 @@ export function AsyncSelect<T>({
     }
   }, [value, options, getOptionValue]);
 
-  // Effect for initial fetch
+  // Resolve the display value for the initially selected option
   useEffect(() => {
-    const initializeOptions = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        // If we have a value, use it for the initial search
-        const data = await fetcher(value);
-        setOriginalOptions(data);
-        setOptions(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch options');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (!mounted) {
-      initializeOptions();
+    if (!mounted && value && fetchInitialOption) {
+      fetchInitialOption(value).then((option) => {
+        if (option) setSelectedOption(option);
+      });
     }
-  }, [mounted, fetcher, value]);
+  }, [mounted, value, fetchInitialOption]);
 
+  // Fetch options when dropdown opens or search term changes
   useEffect(() => {
+    if (!open && options.length === 0 && !preload) return;
+    if (!open && !preload) return;
+
     const fetchOptions = async () => {
+      if (preload && mounted) {
+        if (debouncedSearchTerm) {
+          setOptions(originalOptions.filter((option) => filterFn ? filterFn(option, debouncedSearchTerm) : true));
+        } else {
+          setOptions(originalOptions);
+        }
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
-        const data = await fetcher(debouncedSearchTerm);
+        const data = await fetcher(debouncedSearchTerm || undefined);
         setOriginalOptions(data);
         setOptions(data);
       } catch (err) {
@@ -148,18 +151,8 @@ export function AsyncSelect<T>({
       }
     };
 
-    if (!mounted) {
-      fetchOptions();
-    } else if (!preload) {
-      fetchOptions();
-    } else if (preload) {
-      if (debouncedSearchTerm) {
-        setOptions(originalOptions.filter((option) => filterFn ? filterFn(option, debouncedSearchTerm) : true));
-      } else {
-        setOptions(originalOptions);
-      }
-    }
-  }, [fetcher, debouncedSearchTerm, mounted, preload, filterFn]);
+    fetchOptions();
+  }, [open, debouncedSearchTerm, preload, filterFn]);
 
   const handleSelect = useCallback((currentValue: string) => {
     const newValue = clearable && currentValue === selectedValue ? "" : currentValue;

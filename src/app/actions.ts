@@ -26,13 +26,18 @@ export async function searchUsers(query?: string): Promise<User[]> {
   // If there's a search query, filter the users
   if (query) {
     const lowercaseQuery = query.toLowerCase()
-    return allUsers.filter(user => 
+    return allUsers.filter(user =>
       user.name.toLowerCase().includes(lowercaseQuery)
     ).slice(0, 10) // Return only first 10 matches
   }
 
   // Return first 10 users if no query
   return allUsers.slice(0, 10)
+}
+
+export async function getUserById(id: string): Promise<User | null> {
+  await new Promise(resolve => setTimeout(resolve, Math.random() * 500 + 100))
+  return allUsers.find(user => user.id === id) ?? null
 }
 
 export async function searchAllUsers(): Promise<User[]> {
