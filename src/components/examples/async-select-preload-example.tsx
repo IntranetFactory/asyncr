@@ -30,7 +30,7 @@ export default function AsyncSelectExample() {
           </div>
         </>
       )}
-      getOptionValue={(user) => user.id}
+      getRecordId={(user) => user.id}
       notFound={<div className="py-6 text-center text-sm">No users found</div>}
       label="User"
       placeholder="Search users..."

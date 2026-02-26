@@ -14,8 +14,8 @@ export default function DemoPage() {
       <APISelect<Record<string, unknown>>
         searchUrl="https://dummyjson.com/products/search?q=${query}&limit=10"
         idUrl="https://dummyjson.com/products/${id}"
-        resultsKey={(data: unknown) => (data as { products: Record<string, unknown>[] }).products}
-        getOptionValue={(product) => String(product.id)}
+        getRecords={(data: unknown) => (data as { products: Record<string, unknown>[] }).products}
+        getRecordId={(product) => String(product.id)}
         renderItem={(product) => (
           <>
             <img
@@ -52,21 +52,9 @@ export default function DemoPage() {
       <APISelect<Record<string, unknown>>
         searchUrl="https://dummyjson.com/products/search?q=${query}&limit=10"
         idUrl="https://dummyjson.com/products/${id}"
-        resultsKey={(data: unknown) => (data as { products: Record<string, unknown>[] }).products}
-        getOptionValue={(product) => String(product.id)}
-        renderItem={(product) => (
-          <>
-            <img
-              src={product.thumbnail as string}
-              alt={product.title as string}
-              className="w-8 h-8 rounded object-cover"
-            />
-            <div className="flex flex-col">
-              <div className="font-medium">{product.title as string}</div>
-              <div className="text-xs text-muted-foreground">${String(product.price)}</div>
-            </div>
-          </>
-        )}
+        getRecords="products"
+        getRecordId="${id}"
+        renderItem="${title} @ ${price}"
         notFound={<div className="py-6 text-center text-sm">No products found</div>}
         label="Product 2"
         placeholder="Search products..."

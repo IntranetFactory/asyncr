@@ -40,7 +40,7 @@ code: |
     /** Function to render the item content (used in trigger and as fallback for dropdown) */
     renderItem: (option: T) => React.ReactNode;
     /** Function to get the value from an option */
-    getOptionValue: (option: T) => string;
+    getRecordId: (option: T) => string;
     /** Function to render each option in the dropdown list (falls back to renderItem) */
     renderListItem?: (option: T) => React.ReactNode;
     /** Class name for the item wrapper in the trigger */
@@ -78,7 +78,7 @@ code: |
     preload,
     filterFn,
     renderItem,
-    getOptionValue,
+    getRecordId,
     renderListItem,
     itemClassName = "flex items-center gap-2",
     listItemClassName = "flex items-center gap-2 text-left",
@@ -114,12 +114,12 @@ code: |
     // Initialize selectedOption when options are loaded and value exists
     useEffect(() => {
       if (value && options.length > 0) {
-        const option = options.find(opt => getOptionValue(opt) === value);
+        const option = options.find(opt => getRecordId(opt) === value);
         if (option) {
           setSelectedOption(option);
         }
       }
-    }, [value, options, getOptionValue]);
+    }, [value, options, getRecordId]);
 
     // Effect for initial fetch
     useEffect(() => {
@@ -174,10 +174,10 @@ code: |
     const handleSelect = useCallback((currentValue: string) => {
       const newValue = clearable && currentValue === selectedValue ? "" : currentValue;
       setSelectedValue(newValue);
-      setSelectedOption(options.find((option) => getOptionValue(option) === newValue) || null);
+      setSelectedOption(options.find((option) => getRecordId(option) === newValue) || null);
       onChange(newValue);
       setOpen(false);
-    }, [selectedValue, onChange, clearable, options, getOptionValue]);
+    }, [selectedValue, onChange, clearable, options, getRecordId]);
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
@@ -233,15 +233,15 @@ code: |
               <CommandGroup>
                 {options.map((option) => (
                   <CommandItem
-                    key={getOptionValue(option)}
-                    value={getOptionValue(option)}
+                    key={getRecordId(option)}
+                    value={getRecordId(option)}
                     onSelect={handleSelect}
                   >
                     <div className={listItemClassName}>{(renderListItem ?? renderItem)(option)}</div>
                     <Check
                       className={cn(
                         "ml-auto h-3 w-3",
-                        selectedValue === getOptionValue(option) ? "opacity-100" : "opacity-0"
+                        selectedValue === getRecordId(option) ? "opacity-100" : "opacity-0"
                       )}
                     />
                   </CommandItem>
@@ -312,7 +312,7 @@ export interface AsyncSelectProps<T> {
   /** Function to render the item content (used in trigger and as fallback for dropdown) */
   renderItem: (option: T) => React.ReactNode;
   /** Function to get the value from an option */
-  getOptionValue: (option: T) => string;
+  getRecordId: (option: T) => string;
   /** Function to render each option in the dropdown list (falls back to renderItem) */
   renderListItem?: (option: T) => React.ReactNode;
   /** Class name for the item wrapper in the trigger */
@@ -350,7 +350,7 @@ export function AsyncSelect<T>({
   preload,
   filterFn,
   renderItem,
-  getOptionValue,
+  getRecordId,
   renderListItem,
   itemClassName = "flex items-center gap-2",
   listItemClassName = "flex items-center gap-2 text-left",
@@ -386,12 +386,12 @@ export function AsyncSelect<T>({
   // Initialize selectedOption when options are loaded and value exists
   useEffect(() => {
     if (value && options.length > 0) {
-      const option = options.find(opt => getOptionValue(opt) === value);
+      const option = options.find(opt => getRecordId(opt) === value);
       if (option) {
         setSelectedOption(option);
       }
     }
-  }, [value, options, getOptionValue]);
+  }, [value, options, getRecordId]);
 
   // Effect for initial fetch
   useEffect(() => {
@@ -446,10 +446,10 @@ export function AsyncSelect<T>({
   const handleSelect = useCallback((currentValue: string) => {
     const newValue = clearable && currentValue === selectedValue ? "" : currentValue;
     setSelectedValue(newValue);
-    setSelectedOption(options.find((option) => getOptionValue(option) === newValue) || null);
+    setSelectedOption(options.find((option) => getRecordId(option) === newValue) || null);
     onChange(newValue);
     setOpen(false);
-  }, [selectedValue, onChange, clearable, options, getOptionValue]);
+  }, [selectedValue, onChange, clearable, options, getRecordId]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -505,15 +505,15 @@ export function AsyncSelect<T>({
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
-                  key={getOptionValue(option)}
-                  value={getOptionValue(option)}
+                  key={getRecordId(option)}
+                  value={getRecordId(option)}
                   onSelect={handleSelect}
                 >
                   <div className={listItemClassName}>{(renderListItem ?? renderItem)(option)}</div>
                   <Check
                     className={cn(
                       "ml-auto h-3 w-3",
-                      selectedValue === getOptionValue(option) ? "opacity-100" : "opacity-0"
+                      selectedValue === getRecordId(option) ? "opacity-100" : "opacity-0"
                     )}
                   />
                 </CommandItem>

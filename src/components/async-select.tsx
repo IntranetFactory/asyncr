@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useQuery } from "@tanstack/react-query";
 
-import { cn } from "@/lib/utils";
+import { cn, interpolate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -36,18 +36,18 @@ export interface APISelectProps<T> {
   fetcher?: (query?: string) => Promise<T[]>;
   /** Async function to resolve initial value to option (takes priority over idUrl when set) */
   recordFetcher?: (value: string) => Promise<T | null>;
-  /** Function to extract the results array from the search API response */
-  resultsKey?: (data: unknown) => T[];
+  /** Extract the results array from the API response. String extracts a named property; function for custom extraction */
+  getRecords?: ((data: unknown) => T[]) | string;
   /** Preload all data ahead of time */
   preload?: boolean;
   /** Function to filter options */
   filterFn?: (option: T, query: string) => boolean;
-  /** Function to render the item content (used in trigger and as fallback for dropdown) */
-  renderItem: (option: T) => React.ReactNode;
-  /** Function to get the value from an option */
-  getOptionValue: (option: T) => string;
-  /** Function to render each option in the dropdown list (falls back to renderItem) */
-  renderListItem?: (option: T) => React.ReactNode;
+  /** Render the item content (used in trigger and as fallback for dropdown). String is interpolated with the record */
+  renderItem: ((option: T) => React.ReactNode) | string;
+  /** Get the unique identifier from a record. String is interpolated with the record */
+  getRecordId: ((option: T) => string) | string;
+  /** Render each option in the dropdown list (falls back to renderItem). String is interpolated with the record */
+  renderListItem?: ((option: T) => React.ReactNode) | string;
   /** Class name for the item wrapper in the trigger */
   itemClassName?: string;
   /** Class name for the item wrapper in the dropdown list */
@@ -83,12 +83,12 @@ export function APISelect<T>({
   idUrl,
   fetcher,
   recordFetcher,
-  resultsKey,
+  getRecords,
   preload,
   filterFn,
-  renderItem,
-  getOptionValue,
-  renderListItem,
+  renderItem: renderItemProp,
+  getRecordId: getRecordIdProp,
+  renderListItem: renderListItemProp,
   itemClassName = "flex items-center gap-2",
   listItemClassName = "flex items-center gap-2 text-left",
   notFound,
@@ -104,6 +104,39 @@ export function APISelect<T>({
   noResultsMessage,
   clearable = true,
 }: APISelectProps<T>) {
+  const getRecordId = useMemo(() =>
+    typeof getRecordIdProp === "string"
+      ? (option: T) => interpolate(getRecordIdProp, option as Record<string, unknown>)
+      : getRecordIdProp,
+    [getRecordIdProp]
+  );
+
+  const renderItem = useMemo(() =>
+    typeof renderItemProp === "string"
+      ? (option: T) => interpolate(renderItemProp, option as Record<string, unknown>)
+      : renderItemProp,
+    [renderItemProp]
+  );
+
+  const renderListItem = useMemo(() => {
+    if (renderListItemProp == null) return undefined;
+    return typeof renderListItemProp === "string"
+      ? (option: T) => interpolate(renderListItemProp, option as Record<string, unknown>)
+      : renderListItemProp;
+  }, [renderListItemProp]);
+
+  const resolvedGetRecords = useMemo(() => {
+    if (getRecords == null) return undefined;
+    if (typeof getRecords === "string") {
+      const key = getRecords;
+      return (data: unknown) => {
+        const val = (data as Record<string, unknown>)?.[key];
+        return Array.isArray(val) ? val as T[] : [] as T[];
+      };
+    }
+    return getRecords;
+  }, [getRecords]);
+
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedValue, setSelectedValue] = useState(value);
@@ -129,11 +162,11 @@ export function APISelect<T>({
         const res = await fetch(url);
         if (!res.ok) throw new Error(`Search failed: ${res.statusText}`);
         const data = await res.json();
-        return resultsKey ? resultsKey(data) : data;
+        return resolvedGetRecords ? resolvedGetRecords(data) : data;
       }
       return [];
     },
-    [fetcher, searchUrl, resultsKey]
+    [fetcher, searchUrl, resolvedGetRecords]
   );
 
   const effectiveRecordFetcher = useCallback(
@@ -195,12 +228,12 @@ export function APISelect<T>({
   // Update selectedOption when options are loaded and value exists
   useEffect(() => {
     if (value && options.length > 0) {
-      const option = options.find((opt) => getOptionValue(opt) === value);
+      const option = options.find((opt) => getRecordId(opt) === value);
       if (option) {
         setSelectedOption(option);
       }
     }
-  }, [value, options, getOptionValue]);
+  }, [value, options, getRecordId]);
 
   const handleSelect = useCallback(
     (currentValue: string) => {
@@ -208,12 +241,12 @@ export function APISelect<T>({
         clearable && currentValue === selectedValue ? "" : currentValue;
       setSelectedValue(newValue);
       setSelectedOption(
-        options.find((option) => getOptionValue(option) === newValue) || null
+        options.find((option) => getRecordId(option) === newValue) || null
       );
       onChange(newValue);
       setOpen(false);
     },
-    [selectedValue, onChange, clearable, options, getOptionValue]
+    [selectedValue, onChange, clearable, options, getRecordId]
   );
 
   return (
@@ -292,15 +325,15 @@ export function APISelect<T>({
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem
-                  key={getOptionValue(option)}
-                  value={getOptionValue(option)}
+                  key={getRecordId(option)}
+                  value={getRecordId(option)}
                   onSelect={handleSelect}
                 >
                   <div className={listItemClassName}>{(renderListItem ?? renderItem)(option)}</div>
                   <Check
                     className={cn(
                       "ml-auto h-3 w-3",
-                      selectedValue === getOptionValue(option) ? "opacity-100" : "opacity-0"
+                      selectedValue === getRecordId(option) ? "opacity-100" : "opacity-0"
                     )}
                   />
                 </CommandItem>

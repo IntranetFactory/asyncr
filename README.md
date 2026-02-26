@@ -22,7 +22,7 @@ function MyComponent() {
     <AsyncSelect<DataType>
       fetcher={fetchData}
       renderItem={(item) => <div>{item.name}</div>}
-      getOptionValue={(item) => item.id}
+      getRecordId={(item) => item.id}
       label="Select"
       value={value}
       onChange={setValue}
@@ -39,7 +39,7 @@ function MyComponent() {
 |------|------|-------------|
 | `fetcher` | `(query?: string) => Promise<T[]>` | Async function to fetch options |
 | `renderItem` | `(option: T) => React.ReactNode` | Function to render item content (used in trigger and as fallback for dropdown) |
-| `getOptionValue` | `(option: T) => string` | Function to get unique value from option |
+| `getRecordId` | `(option: T) => string` | Function to get unique value from option |
 | `value` | `string` | Currently selected value |
 | `onChange` | `(value: string) => void` | Callback when selection changes |
 | `label` | `string` | Label for the select field |
@@ -85,7 +85,7 @@ function MyComponent() {
       </div>
     </>
   )}
-  getOptionValue={(user) => user.id}
+  getRecordId={(user) => user.id}
   notFound={<div className="py-6 text-center text-sm">No users found</div>}
   label="User"
   placeholder="Search users..."
@@ -117,7 +117,7 @@ function MyComponent() {
       </div>
     </>
   )}
-  getOptionValue={(user) => user.id}
+  getRecordId={(user) => user.id}
   label="User"
   value={selectedUser}
   onChange={setSelectedUser}
@@ -132,7 +132,7 @@ interface AsyncSelectProps<T> {
   preload?: boolean;
   filterFn?: (option: T, query: string) => boolean;
   renderItem: (option: T) => React.ReactNode;
-  getOptionValue: (option: T) => string;
+  getRecordId: (option: T) => string;
   renderListItem?: (option: T) => React.ReactNode;
   itemClassName?: string;
   listItemClassName?: string;
