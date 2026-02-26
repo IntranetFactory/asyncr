@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, X } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 
 import { cn } from "@/lib/utils";
@@ -182,7 +182,29 @@ export function AsyncSelect<T>({
           ) : (
             placeholder
           )}
-          <ChevronsUpDown className="opacity-50" size={10} />
+          <div className="flex items-center gap-1 ml-auto shrink-0">
+            {clearable && selectedValue && (
+              <span
+                role="button"
+                aria-label="Clear selection"
+                className="flex items-center justify-center"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSelectedValue("");
+                  setSelectedOption(null);
+                  onChange("");
+                }}
+              >
+                <X className="opacity-50 hover:opacity-100 h-3 w-3" />
+              </span>
+            )}
+            <ChevronsUpDown className="opacity-50" size={10} />
+          </div>
         </Button>
       </PopoverTrigger>
       <PopoverContent style={{ width: width }} className={cn("p-0", className)}>

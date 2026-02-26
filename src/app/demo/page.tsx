@@ -19,7 +19,7 @@ async function getProductById(id: string): Promise<Record<string, unknown> | nul
 }
 
 export default function DemoPage() {
-  const [selectedProduct, setSelectedProduct] = useState<string>("1");
+  const [selectedProduct, setSelectedProduct] = useState<string>("26");
 
   console.log(selectedProduct);
 
